@@ -1,7 +1,5 @@
 package datablock;
 
-import org.springframework.util.StringUtils;
-
 /**
  * @author Anton Solovev
  * @since 7/17/2017.
@@ -9,12 +7,12 @@ import org.springframework.util.StringUtils;
 public class StringKeyPartitioner implements BlockPartitioner {
 
     private static final int ALPHABET_PARTITION = 26;
+    private static final int OFFSET = 65;
 
     @Override
     public Block block(Object key, Block[] blocks) {
-        String s = StringUtils.uncapitalize(key.toString());
-        int hash = Character.hashCode(s.charAt(0));
-        int part = hash / numPartitions();
+        int hash = Character.hashCode(key.toString().charAt(0));
+        int part = (hash - OFFSET) % numPartitions();
         Block block = blocks[part];
         if (block == null) {
             block = new Block(part);

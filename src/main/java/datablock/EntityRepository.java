@@ -1,14 +1,16 @@
 package datablock;
 
 import domain.Entity;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.transactions.Transaction;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -38,16 +40,19 @@ public class EntityRepository {
         blockCache.putIfAbsent(dictionaryName, new Block[partitioner.numPartitions()]);
         IgniteAtomicSequence sequence = ignite.atomicSequence(dictionaryName + "_seq", 0, true);
         try (Transaction tx = ignite.transactions().txStart()) {
-            Stream<Pair<Entity, Block>> ebStream = entities.stream()
-                    .map(e -> new ImmutablePair<>(e, getBlock(e, dictionaryName, partitioner)));
-            ebStream.forEach(pair -> {
-                Block block = pair.getValue();
+            Object[] objBlocks = blockCache.get(dictionaryName);
+            Block[] blocks = Arrays.copyOf(objBlocks, partitioner.numPartitions(), Block[].class);
+            entities.forEach(e -> {
+                Block block = partitioner.block(e.getKey(), blocks);
+                blocks[block.getPartition()] = block;
                 long id = sequence.getAndIncrement();
-                idCache.putIfAbsent(block.getPartition() - 1, new ArrayList<>());
-                List<Long> ids = idCache.get(block.getPartition() - 1);
+                idCache.putIfAbsent(block.getPartition(), new ArrayList<>());
+                List<Long> ids = idCache.get(block.getPartition());
                 ids.add(id);
-                entityCache.put(id, pair.getKey());
+                idCache.put(block.getPartition(), ids);
+                entityCache.put(id, e);
             });
+            blockCache.put(dictionaryName, blocks);
             tx.commit();
         }
     }
@@ -66,16 +71,19 @@ public class EntityRepository {
         Object[] objBlocks = blockCache.get(dictionaryName);
         Block[] blocks = Arrays.copyOf(objBlocks, partitioner.numPartitions(), Block[].class);
         Block block = partitioner.block(entity.getKey(), blocks);
-        blocks[block.getPartition() - 1] = block;
+        blocks[block.getPartition()] = block;
         blockCache.put(dictionaryName, blocks);
         return block;
     }
 
     private void saveEntity(Entity entity, IgniteAtomicSequence sequence, Block block) {
         long id = sequence.getAndIncrement();
-        List<Long> ids = idCache.getAndPutIfAbsent(block.getPartition() - 1, new ArrayList<>());
+        List<Long> ids = idCache.get(block.getPartition());
+        if (ids == null) {
+            ids = new ArrayList<>();
+        }
         ids.add(id);
-        idCache.put(block.getPartition() - 1, ids);
+        idCache.put(block.getPartition(), ids);
         entityCache.put(id, entity);
     }
 
@@ -91,7 +99,7 @@ public class EntityRepository {
     }
 
     private Stream<Entity> processBlock(Block block, Predicate<Entity> predicate, Comparator<Entity> comparator) {
-        List<Long> ids = idCache.get(block.getPartition() - 1);
+        List<Long> ids = idCache.get(block.getPartition());
         return ids.stream()
                 .map(entityCache::get)
                 .filter(predicate)

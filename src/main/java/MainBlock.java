@@ -7,9 +7,8 @@ import org.apache.ignite.Ignition;
 
 import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,27 +21,30 @@ public class MainBlock {
         Ignite ignite = Ignition.start();
         EntityRepository repository = new EntityRepository(ignite);
         RandomStringGenerator stringGenerator = new RandomStringGenerator.Builder()
-                .withinRange('A', 'z')
+                .withinRange('A', 'Z')
                 .build();
-        for (int i = 0; i < 100; i++) {
-            repository.save(new Entity().setKey(stringGenerator.generate(10)), "entityDick", new StringKeyPartitioner());
-        }
 
-//        List<Entity> entities = Stream
-//                .generate(() -> new Entity().setKey(stringGenerator.generate(10)).setVal(LocalDate.now()))
-//                .limit(100000)
-//                .collect(Collectors.toList());
-//        repository.saveBatch(entities, "entityDick", new StringKeyPartitioner());
+        long prePut = System.currentTimeMillis();
+        List<Entity> entities = Stream
+                .generate(() -> new Entity().setKey(stringGenerator.generate(10)).setVal(LocalDate.now()))
+                .limit(100000)
+                .collect(Collectors.toList());
+        repository.saveBatch(entities, "entityDick", new StringKeyPartitioner());
+        long afterPut = System.currentTimeMillis();
 
-        long pre = System.currentTimeMillis();
+        long preGet = System.currentTimeMillis();
         Collection<Entity> page = repository
                 .getPage(0, 100,
-                        e -> true, b -> true,
-                        Comparator.comparing(Entity::getKey), EntityRepository.DEFAULT_BLOCK_COMPARATOR,
+                        e -> Pattern.matches("AN.*?", e.getKey()),
+                        b -> b.getKeyHashList().contains(Character.valueOf('A').hashCode()),
+                        (e1, e2) -> e1.getKey().compareTo(e2.getKey()) * -1,
+                        (b1, b2) -> Double.compare(b1.getMedianHash(), b2.getMedianHash()) * -1,
                         "entityDick");
-        long after = System.currentTimeMillis();
+        long afterGet = System.currentTimeMillis();
 
         page.forEach(System.out::println);
-        System.out.println("time: " + (after - pre));
+        System.out.println("time of put: " + (afterPut - prePut));
+        System.out.println("time of get: " + (afterGet - preGet));
+        ignite.close();
     }
 }
