@@ -17,7 +17,7 @@ import java.util.UUID;
 import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE;
 
 /**
- * @author tonycox
+ * @author Anton Solovev
  * @since 18.07.17
  */
 @Configuration

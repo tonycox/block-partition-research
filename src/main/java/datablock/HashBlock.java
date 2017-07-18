@@ -1,5 +1,6 @@
 package datablock;
 
+import datablock.core.Block;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ import java.util.List;
 @Getter
 @RequiredArgsConstructor
 @EqualsAndHashCode(of = "partition")
-public class Block {
+public class HashBlock implements Block {
 
     private final int partition;
 
@@ -27,5 +28,14 @@ public class Block {
                 .mapToInt(v -> v)
                 .average()
                 .orElseThrow(() -> new RuntimeException("something gone wrong"));
+    }
+
+    @Override
+    public int compareTo(Block o) {
+        if (o instanceof HashBlock) {
+            return Double.compare(medianHash, ((HashBlock) o).medianHash);
+        } else {
+            throw new IllegalArgumentException("block is not a " + HashBlock.class);
+        }
     }
 }
