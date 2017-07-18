@@ -1,8 +1,12 @@
+import config.IgniteCfg;
 import domain.Entity;
 import javastream.EntityRepository;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteSpringBean;
 import org.apache.ignite.Ignition;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -17,7 +21,11 @@ import java.util.stream.Stream;
  */
 public class MainStream {
     public static void main(String[] args) {
-        Ignite ignite = Ignition.start();
+        ApplicationContext appContext = new AnnotationConfigApplicationContext(IgniteCfg.class);
+        appContext.getBean(IgniteSpringBean.class);
+        appContext.getBean(IgniteSpringBean.class);
+        Ignite ignite = appContext.getBean(IgniteSpringBean.class);
+
         EntityRepository repository = new EntityRepository(ignite);
         RandomStringGenerator stringGenerator = new RandomStringGenerator.Builder()
                 .withinRange('A', 'Z')
@@ -42,6 +50,6 @@ public class MainStream {
         page.forEach(System.out::println);
         System.out.println("time of put: " + (afterPut - prePut));
         System.out.println("time of get: " + (afterGet - preGet));
-        ignite.close();
+        Ignition.allGrids().forEach(Ignite::close);
     }
 }

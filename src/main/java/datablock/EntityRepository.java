@@ -1,6 +1,7 @@
 package datablock;
 
 import domain.Entity;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -20,6 +21,7 @@ import static java.util.stream.Collectors.toCollection;
  * @author Anton Solovev
  * @since 11.07.17.
  */
+@Slf4j
 public class EntityRepository {
 
     public static final Comparator<Block> DEFAULT_BLOCK_COMPARATOR = Comparator.comparingDouble(Block::getMedianHash);
@@ -91,6 +93,7 @@ public class EntityRepository {
                                       Predicate<Entity> predicate, Predicate<Block> blockPredicate,
                                       Comparator<Entity> comparator, Comparator<Block> blockComparator,
                                       String dictionaryName) {
+        log.debug("Getting page with index {} and limit {} started", startIndex, limit);
         return getAll(dictionaryName, blockPredicate, blockComparator)
                 .flatMap(block -> processBlock(block, predicate, comparator))
                 .skip(startIndex)
