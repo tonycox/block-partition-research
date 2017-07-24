@@ -41,5 +41,24 @@
             <artifactId>commons-text</artifactId>
             <version>1.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.epam.Lagerta</groupId>
+            <artifactId>lagerta-core</artifactId>
+            <version>0.5.1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.ignite</groupId>
+                    <artifactId>ignite-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.ignite</groupId>
+                    <artifactId>ignite-spring</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 </project>
